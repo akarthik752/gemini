@@ -1,0 +1,6 @@
+{
+  "name": "Farmer & Buyer Marketplace",
+  "description": "Role-based marketplace featuring separate farmer and consumer interfaces for dynamic item listing, fixed price controls, and direct consumer purchasing without pre-set IDs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
