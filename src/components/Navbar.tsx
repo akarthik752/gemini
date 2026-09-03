@@ -8,9 +8,12 @@ import {
   RotateCcw, 
   Package, 
   ShieldCheck,
-  Store
+  Store,
+  Globe,
+  Coins
 } from 'lucide-react';
 import { SettingsMenu } from './SettingsMenu';
+import { usePreferences } from '../context/PreferencesContext';
 
 interface NavbarProps {
   currentView: UserRole;
@@ -26,6 +29,9 @@ interface NavbarProps {
   onGoHome?: () => void;
   onOpenProfile?: () => void;
   onOpenPasswordChange?: () => void;
+  onOpenLanguage?: () => void;
+  onOpenCurrency?: () => void;
+  onOpenCountry?: () => void;
   onOpenContact?: () => void;
 }
 
@@ -43,8 +49,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onGoHome,
   onOpenProfile,
   onOpenPasswordChange,
+  onOpenLanguage,
+  onOpenCurrency,
+  onOpenCountry,
   onOpenContact,
 }) => {
+  const { language, currency, selectedCountry, t } = usePreferences();
+
   const handleRoleClick = (targetRole: UserRole) => {
     if (onRequestSwitchRole) {
       onRequestSwitchRole(targetRole);
@@ -64,6 +75,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               onGoHome={() => (onGoHome ? onGoHome() : onViewChange('buyer'))}
               onOpenProfile={() => onOpenProfile && onOpenProfile()}
               onOpenPasswordChange={() => onOpenPasswordChange && onOpenPasswordChange()}
+              onOpenLanguage={() => onOpenLanguage && onOpenLanguage()}
+              onOpenCurrency={() => onOpenCurrency && onOpenCurrency()}
+              onOpenCountry={() => onOpenCountry && onOpenCountry()}
               onOpenOrders={onOpenBuyerOrders}
               onOpenContact={() => onOpenContact && onOpenContact()}
               onLogout={onLogout}
@@ -73,59 +87,84 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
 
             <div 
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
               onClick={() => (onGoHome ? onGoHome() : onViewChange('buyer'))}
               title="AgriDirect Home"
             >
-              <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 group-hover:scale-105 transition-transform">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 group-hover:scale-105 transition-transform shrink-0">
                 <Store className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-800 to-teal-900 bg-clip-text text-transparent">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-800 to-teal-900 bg-clip-text text-transparent truncate">
                     AgriDirect
                   </span>
-                  <span className="hidden md:inline-block bg-gradient-to-r from-amber-400 to-orange-500 text-white uppercase text-[9px] tracking-wider font-extrabold px-2 py-0.5 rounded-full shadow-xs">
-                    Fixed Pricing
+                  <span className="hidden md:inline-block bg-gradient-to-r from-amber-400 to-orange-500 text-white uppercase text-[9px] tracking-wider font-extrabold px-2 py-0.5 rounded-full shadow-xs shrink-0">
+                    {t('fixedPricing', 'Fixed Pricing')}
                   </span>
                 </div>
-                <p className="text-[11px] text-emerald-800/80 font-medium hidden md:block leading-tight">
-                  Direct Farm-to-Consumer Protocol
+                <p className="text-[11px] text-emerald-800/80 font-medium hidden lg:block leading-tight truncate">
+                  {t('farmToConsumer', 'Direct Farm-to-Consumer Protocol')}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Center: Portal Mode Switcher */}
-          <div className="flex items-center bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+          {/* Center: Portal Mode Switcher (Visible on tablet & desktop; phone uses bottom navigation) */}
+          <div className="hidden sm:flex items-center bg-slate-100/90 p-1 sm:p-1.5 rounded-2xl border border-slate-200 shadow-inner shrink-0">
             <button
               id="nav-switch-farmer"
               onClick={() => handleRoleClick('farmer')}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold rounded-xl transition-all ${
                 currentView === 'farmer'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-600 hover:text-emerald-800 hover:bg-white/60'
               }`}
             >
-              <Tractor className="w-4 h-4" />
-              <span>Farmer Portal</span>
+              <Tractor className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">{t('farmerPortal', 'Farmer Portal')}</span>
+              <span className="inline md:hidden">Farmer</span>
             </button>
             <button
               id="nav-switch-buyer"
               onClick={() => handleRoleClick('buyer')}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold rounded-xl transition-all ${
                 currentView === 'buyer'
                   ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/30'
                   : 'text-slate-600 hover:text-amber-800 hover:bg-white/60'
               }`}
             >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Buyer Market</span>
+              <ShoppingBag className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">{t('buyerMarketplace', 'Buyer Market')}</span>
+              <span className="inline md:hidden">Market</span>
             </button>
           </div>
 
-          {/* Right Actions: User Account, Cart, Reset */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right Actions: Quick Country/Curr pill, Buyer Cart, Orders, User */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Quick Country indicator click to open country selector */}
+            <button
+              id="nav-country-quick-btn"
+              onClick={() => onOpenCountry && onOpenCountry()}
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-950 text-xs font-bold transition-all shadow-2xs"
+              title="Change Country & Regional Availability"
+            >
+              <span className="text-sm leading-none">{selectedCountry?.flag || '🌐'}</span>
+              <span className="hidden xl:inline">{selectedCountry?.name || 'Country'}</span>
+              <span className="xl:hidden">{selectedCountry?.code || 'GLB'}</span>
+            </button>
+
+            {/* Quick Currency indicator click to open currency selector */}
+            <button
+              id="nav-currency-quick-btn"
+              onClick={() => onOpenCurrency && onOpenCurrency()}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-950 text-xs font-mono font-bold transition-all shadow-2xs"
+              title="Change Pricing Currency (Rupees, Euro, USD, etc.)"
+            >
+              <span>{currency.flag}</span>
+              <span>{currency.symbol} {currency.code}</span>
+            </button>
+
             {/* Buyer Cart Icon */}
             {currentView === 'buyer' && (
               <button
@@ -152,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Track Orders & View Receipts"
               >
                 <Package className="w-4 h-4 text-amber-600" />
-                <span className="hidden sm:inline">Orders</span>
+                <span className="hidden sm:inline">{t('orders', 'Orders')}</span>
               </button>
             )}
 
@@ -179,36 +218,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {currentUser.role}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500 font-mono truncate block" title={currentUser.email}>
-                    {currentUser.email || `@${currentUser.username}`}
+                  <span className="text-[10px] text-slate-400 font-mono block mt-0.5 truncate">
+                    {currentUser.email}
                   </span>
                 </div>
                 <button
-                  id="logout-btn"
+                  id="nav-logout-btn"
                   onClick={onLogout}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1"
-                  title="Logout"
+                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                  title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
               <button
-                id="open-auth-btn"
+                id="nav-signin-btn"
                 onClick={() => onOpenAuth(currentView)}
-                className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl shadow-md shadow-emerald-600/25 transition-all"
+                className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
               >
-                <ShieldCheck className="w-4 h-4 text-emerald-200" />
-                <span>Sign In with Gmail</span>
+                <ShieldCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('signIn', 'Sign In')}</span>
+                <span className="text-[10px] font-normal opacity-80 hidden md:inline">Gmail</span>
               </button>
             )}
 
-            {/* Clear Data / Reset tool button */}
+            {/* Reset Demo Data Button */}
             <button
-              id="reset-data-btn"
               onClick={onResetData}
-              title="Reset all dynamic data & accounts (Start completely fresh with no IDs)"
-              className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              title="Reset All Live Data to Default"
             >
               <RotateCcw className="w-4 h-4" />
             </button>

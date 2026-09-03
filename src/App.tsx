@@ -18,6 +18,7 @@ import { ProductOrderModal } from './components/buyer/ProductOrderModal';
 import { RoleSwitchModal } from './components/RoleSwitchModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ContactModal } from './components/ContactModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { 
   Tractor, 
   ShoppingBag, 
@@ -42,7 +43,7 @@ export default function App() {
   const [isRoleSwitchModalOpen, setIsRoleSwitchModalOpen] = useState(false);
   const [pendingTargetRole, setPendingTargetRole] = useState<UserRole>('farmer');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'profile' | 'password'>('profile');
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'profile' | 'password' | 'language' | 'currency' | 'country'>('profile');
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBuyerOrdersOpen, setIsBuyerOrdersOpen] = useState(false);
@@ -148,7 +149,19 @@ export default function App() {
       return;
     }
 
-    // Require authenticating with another Gmail account for the target role
+    // If guest user, allow navigating directly between portals
+    if (!currentUser) {
+      setCurrentView(targetRole);
+      return;
+    }
+
+    // If user's active role already matches target role, simply switch view
+    if (currentUser.role === targetRole) {
+      setCurrentView(targetRole);
+      return;
+    }
+
+    // Open role switch modal to seamlessly convert or authenticate
     setPendingTargetRole(targetRole);
     setIsRoleSwitchModalOpen(true);
   };
@@ -156,7 +169,8 @@ export default function App() {
   const handleRoleSwitchSuccess = (account: Account, targetRole: UserRole) => {
     setCurrentUser(account);
     setCurrentView(targetRole);
-    showNotification(`Authenticated as ${account.fullName} (${account.email}) on ${targetRole === 'farmer' ? 'Farmer' : 'Buyer'} portal`);
+    setIsRoleSwitchModalOpen(false);
+    showNotification(`Active portal switched to ${targetRole === 'farmer' ? 'Farmer Portal' : 'Buyer Marketplace'} (${account.fullName})`);
   };
 
   const totalCartCount = cart.reduce((sum, it) => sum + it.quantity, 0);
@@ -210,20 +224,32 @@ export default function App() {
           setSettingsInitialTab('password');
           setIsSettingsModalOpen(true);
         }}
+        onOpenLanguage={() => {
+          setSettingsInitialTab('language');
+          setIsSettingsModalOpen(true);
+        }}
+        onOpenCurrency={() => {
+          setSettingsInitialTab('currency');
+          setIsSettingsModalOpen(true);
+        }}
+        onOpenCountry={() => {
+          setSettingsInitialTab('country');
+          setIsSettingsModalOpen(true);
+        }}
         onOpenContact={() => setIsContactModalOpen(true)}
       />
 
       {/* Real-time sync notification toast */}
       {notification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-700/20 border border-emerald-400 flex items-center gap-3 text-xs font-bold animate-fadeIn">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-ping"></span>
-          <Sparkles className="w-4 h-4 text-amber-300" />
+        <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl shadow-xl shadow-emerald-700/20 border border-emerald-400 flex items-center gap-3 text-xs font-bold animate-fadeIn">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-ping shrink-0"></span>
+          <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Main Body View */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-24 md:pb-16">
         {currentView === 'farmer' ? (
           // FARMER VIEW
           currentUser && currentUser.role === 'farmer' ? (
@@ -320,10 +346,10 @@ export default function App() {
       </main>
 
       {/* Vibrant Colorful Footer */}
-      <footer className="border-t border-emerald-100 bg-white px-6 py-6 text-xs text-slate-600 mt-auto">
+      <footer className="border-t border-emerald-100 bg-white px-4 sm:px-6 py-6 text-xs text-slate-600 mt-auto mb-14 md:mb-0">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
               🌾
             </div>
             <div>
@@ -332,7 +358,7 @@ export default function App() {
               <span className="text-emerald-700 font-semibold">Direct Farm-to-Consumer Protocol</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-4 text-xs">
             <span className="bg-emerald-50 text-emerald-800 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
               100% Farmer Fixed Prices
             </span>
@@ -343,6 +369,20 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar (Phone-optimized quick thumb access) */}
+      <MobileBottomNav
+        currentView={currentView}
+        onViewChange={(role) => handleRequestSwitchRole(role)}
+        cartCount={totalCartCount}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenOrders={() => setIsBuyerOrdersOpen(true)}
+        onOpenSettings={() => {
+          setSettingsInitialTab('profile');
+          setIsSettingsModalOpen(true);
+        }}
+        currentUser={currentUser}
+      />
 
       {/* Modals and Drawers */}
       <AuthModal

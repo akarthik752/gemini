@@ -8,6 +8,8 @@ export interface Account {
   fullName: string;
   phone: string;
   location: string;
+  country?: string; // Country name e.g. 'India', 'United States', 'Spain'
+  countryCode?: string; // e.g. 'IN', 'US', 'ES'
   farmName?: string; // Specific to farmers
   createdAt: string;
 }
@@ -26,6 +28,9 @@ export interface ProduceItem {
   farmName: string;
   farmerLocation: string;
   farmerPhone: string;
+  country?: string; // Country where produce is grown/available e.g. 'India', 'United States'
+  countryCode?: string; // e.g. 'IN', 'US', 'ES'
+  countryFlag?: string; // e.g. '🇮🇳', '🇺🇸'
   name: string;
   category: 'Vegetables' | 'Fruits' | 'Grains' | 'Dairy & Eggs' | 'Herbs & Spices' | 'Honey & Others';
   unit: string; // 'kg', 'quintal', 'liter', 'dozen', 'bunch', 'crate'

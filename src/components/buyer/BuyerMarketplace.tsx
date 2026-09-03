@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProduceItem, Account } from '../../types';
 import { CATEGORIES } from '../../utils/producePresets';
+import { usePreferences } from '../../context/PreferencesContext';
 import { 
   Search, 
   ShoppingBag, 
@@ -14,7 +15,8 @@ import {
   ArrowUpDown,
   Tag,
   ShieldCheck,
-  Info
+  Info,
+  Globe
 } from 'lucide-react';
 
 interface BuyerMarketplaceProps {
@@ -104,23 +106,54 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
   onSwitchToFarmer,
   onOpenAuth,
 }) => {
+  const { 
+    formatPrice, 
+    t, 
+    currency, 
+    selectedCountry, 
+    setSelectedCountryByCode, 
+    countries 
+  } = usePreferences();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [countryFilter, setCountryFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'newest'>('newest');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addedAnimationId, setAddedAnimationId] = useState<string | null>(null);
   const [selectedItemForDetail, setSelectedItemForDetail] = useState<ProduceItem | null>(null);
 
-  // Filter and sort
+  // Compute counts per country
+  const countryCounts = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    produceItems.forEach(item => {
+      const code = item.countryCode || 'US';
+      map[code] = (map[code] || 0) + 1;
+    });
+    return map;
+  }, [produceItems]);
+
+  // List of countries that actually have items, plus the user's selected country
+  const availableCountries = React.useMemo(() => {
+    return countries.filter(c => (countryCounts[c.code] || 0) > 0 || c.code === selectedCountry?.code);
+  }, [countries, countryCounts, selectedCountry]);
+
+  // Filter and sort items
   const filteredItems = produceItems.filter(item => {
     const matchesSearch = 
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.farmName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.farmerLocation.toLowerCase().includes(searchQuery.toLowerCase());
+      item.farmerLocation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.country && item.country.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
 
-    return matchesSearch && matchesCategory;
+    const matchesCountry = 
+      countryFilter === 'ALL' ||
+      item.countryCode === countryFilter ||
+      (item.country && item.country.toLowerCase() === countryFilter.toLowerCase());
+
+    return matchesSearch && matchesCategory && matchesCountry;
   }).sort((a, b) => {
     if (sortBy === 'price_asc') return a.price - b.price;
     if (sortBy === 'price_desc') return b.price - a.price;
@@ -143,10 +176,17 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
     }, 1200);
   };
 
+  const handleSelectCountryFilter = (code: string) => {
+    setCountryFilter(code);
+    if (code !== 'ALL') {
+      setSelectedCountryByCode(code);
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-fadeIn">
       {/* Consumer Hero Banner - Vibrant & Colorful */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 text-white p-8 sm:p-12 shadow-xl shadow-teal-900/10 space-y-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 text-white p-5 sm:p-8 md:p-12 shadow-xl shadow-teal-900/10 space-y-5 sm:space-y-6">
         {/* Ambient background glow orbs */}
         <div className="absolute -top-16 -right-16 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -157,17 +197,17 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>Direct Harvest • 100% Farmer Fixed Rates</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Fresh Local Harvest <span className="text-amber-300">Marketplace</span>
             </h1>
-            <p className="text-sm sm:text-base text-emerald-50/90 leading-relaxed font-medium">
+            <p className="text-xs sm:text-sm md:text-base text-emerald-50/90 leading-relaxed font-medium">
               Every item is posted directly by registered farmers with non-negotiable producer prices. Zero middlemen markups, zero hidden auction fees—100% of your payment is settled directly with growers.
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 text-right shrink-0 shadow-lg">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 sm:p-5 text-left md:text-right shrink-0 shadow-lg">
             <div className="text-xs uppercase font-bold tracking-wider text-emerald-200">Active Live Listings</div>
-            <div className="text-3xl sm:text-4xl font-black text-white mt-0.5">{produceItems.length} Products</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white mt-0.5">{produceItems.length} Products</div>
             <div className="inline-flex items-center gap-1.5 text-xs text-amber-300 font-bold mt-1">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
               Real-Time Syncing
@@ -204,7 +244,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search produce name, farm origin, or region..."
+              placeholder={t('searchPlaceholder', 'Search produce name, farm origin, or region...')}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"
             />
           </div>
@@ -224,6 +264,84 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
                 <option value="price_desc">Price: High to Low</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Country-Based Availability Filter Bar */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-200/60">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider block">
+                  Country Availability & Sourcing
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {countryFilter === 'ALL' 
+                    ? `Showing all ${filteredItems.length} international listings across all regions` 
+                    : `Showing ${filteredItems.length} listings harvested in ${countries.find(c => c.code === countryFilter)?.flag} ${countries.find(c => c.code === countryFilter)?.name}`}
+                </span>
+              </div>
+            </div>
+
+            {countryFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => handleSelectCountryFilter('ALL')}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors self-start sm:self-auto flex items-center gap-1"
+              >
+                <span>Clear Filter (View All Countries)</span>
+              </button>
+            )}
+          </div>
+
+          {/* Quick Country Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+            <button
+              type="button"
+              id="filter-country-all"
+              onClick={() => handleSelectCountryFilter('ALL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                countryFilter === 'ALL'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+            >
+              <span>🌐 All Countries</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                countryFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {produceItems.length}
+              </span>
+            </button>
+
+            {availableCountries.map((c) => {
+              const count = countryCounts[c.code] || 0;
+              const isSelected = countryFilter === c.code;
+              return (
+                <button
+                  key={c.code}
+                  id={`filter-country-${c.code.toLowerCase()}`}
+                  type="button"
+                  onClick={() => handleSelectCountryFilter(c.code)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-700 shadow-md shadow-emerald-600/20'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <span className="text-sm leading-none">{c.flag}</span>
+                  <span>{c.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -260,11 +378,11 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
               Live Feed Status
             </span>
             <h3 className="text-2xl font-bold text-slate-800">
-              {produceItems.length === 0 ? 'No Active Listings in Feed' : 'No Matching Produce Found'}
+              {produceItems.length === 0 ? 'No Farmer Produce Listed Yet' : 'No Matching Produce Found'}
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
               {produceItems.length === 0
-                ? 'This protocol begins completely clean with no hardcoded pre-configured accounts. Any farmer can register, list fresh harvest crops, and fix prices.'
+                ? 'Only produce published directly by registered farmers will appear here. No pre-loaded items exist. Once a farmer lists crops with their fixed prices, they will instantly appear live here.'
                 : 'Try adjusting your search criteria or switching category filter.'}
             </p>
           </div>
@@ -339,16 +457,22 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
                   {/* Body Info */}
                   <div className="p-5 space-y-3">
                     <div>
-                      <span className="text-xs uppercase font-extrabold tracking-wide text-emerald-700 flex items-center gap-1">
-                        <Tractor className="w-3 h-3" />
-                        {item.farmName}
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs uppercase font-extrabold tracking-wide text-emerald-700 flex items-center gap-1 truncate">
+                          <Tractor className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{item.farmName}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-700 shrink-0 border border-slate-200">
+                          <span>{item.countryFlag || '🌐'}</span>
+                          <span>{item.country || 'Global'}</span>
+                        </span>
+                      </div>
                       <h4 className="text-lg font-bold text-slate-900 mt-1 leading-snug group-hover:text-emerald-800 transition-colors">
                         {item.name}
                       </h4>
                       <span className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                        {item.farmerLocation}
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">{item.farmerLocation}</span>
                       </span>
                     </div>
 
@@ -357,14 +481,14 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
                       <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800 mb-1">
                         <span className="flex items-center gap-1">
                           <Check className="w-3 h-3 text-emerald-600" />
-                          Farmer Fixed Price
+                          {t('farmerFixedPrice', 'Farmer Fixed Price')}
                         </span>
                         <span className="text-[10px] bg-emerald-200/60 text-emerald-900 px-2 py-0.2 rounded-full uppercase tracking-wider font-extrabold">
                           Direct
                         </span>
                       </div>
                       <div className="text-2xl font-black text-emerald-950">
-                        ${item.price.toFixed(2)}{' '}
+                        {formatPrice(item.price)}{' '}
                         <span className="text-xs uppercase font-bold text-emerald-700">
                           / {item.unit}
                         </span>
@@ -452,9 +576,9 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
 
       {/* Produce Detail Modal */}
       {selectedItemForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white w-full max-w-lg rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
-            <div className="relative h-56 bg-slate-100 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto">
+            <div className="relative h-48 sm:h-56 bg-slate-100 overflow-hidden shrink-0">
               {selectedItemForDetail.imageUrl ? (
                 <img
                   src={selectedItemForDetail.imageUrl}
@@ -498,10 +622,10 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
               <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 flex items-center justify-between">
                 <div>
                   <span className="text-xs text-emerald-800 font-bold uppercase tracking-wider block">
-                    Producer Fixed Price
+                    {t('farmerFixedPrice', 'Producer Fixed Price')}
                   </span>
                   <div className="text-3xl font-black text-emerald-950">
-                    ${selectedItemForDetail.price.toFixed(2)}{' '}
+                    {formatPrice(selectedItemForDetail.price)}{' '}
                     <span className="text-xs uppercase font-bold text-emerald-700">
                       / {selectedItemForDetail.unit}
                     </span>
@@ -520,17 +644,24 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
                 <p className="leading-relaxed">{selectedItemForDetail.description}</p>
               </div>
 
-              {/* Farmer Info */}
+              {/* Farmer & Origin Info */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-                <div className="font-bold text-slate-900 flex items-center gap-2">
-                  <Tractor className="w-4 h-4 text-emerald-700" />
-                  <span>Farm Origin: {selectedItemForDetail.farmName}</span>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-900 flex items-center gap-2">
+                    <Tractor className="w-4 h-4 text-emerald-700" />
+                    <span>Farm Origin: {selectedItemForDetail.farmName}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg text-xs font-bold text-slate-800 border border-slate-200 shadow-xs">
+                    <span>{selectedItemForDetail.countryFlag || '🌐'}</span>
+                    <span>{selectedItemForDetail.country || 'Global'}</span>
+                  </span>
                 </div>
                 <div className="text-slate-600">
                   Grower: {selectedItemForDetail.farmerName} (@{selectedItemForDetail.farmerUsername})
                 </div>
-                <div className="text-slate-600">
-                  Location: {selectedItemForDetail.farmerLocation}
+                <div className="text-slate-600 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Regional Location: {selectedItemForDetail.farmerLocation}, {selectedItemForDetail.country || 'Worldwide'}</span>
                 </div>
                 <div className="text-slate-600">
                   Harvest Date: {selectedItemForDetail.harvestDate}
@@ -548,7 +679,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
                   className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-800 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>Order Now (${(selectedItemForDetail.price * getQuantity(selectedItemForDetail.id)).toFixed(2)})</span>
+                  <span>Order Now ({formatPrice(selectedItemForDetail.price * getQuantity(selectedItemForDetail.id))})</span>
                 </button>
                 <button
                   onClick={() => {

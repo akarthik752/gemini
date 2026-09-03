@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Order, Account } from '../../types';
+import { usePreferences } from '../../context/PreferencesContext';
 import {
   X,
   Package,
@@ -28,6 +29,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
   buyer,
   orders,
 }) => {
+  const { formatPrice, t } = usePreferences();
   const [filterQuery, setFilterQuery] = useState('');
 
   if (!isOpen) return null;
@@ -182,7 +184,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
                         </span>
                       </div>
                       <span className="font-mono font-bold text-slate-900">
-                        ${item.totalPrice.toFixed(2)}
+                        {formatPrice(item.totalPrice)}
                       </span>
                     </div>
                   ))}
@@ -214,7 +216,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Total:</span>
                       <span className="text-base font-black text-emerald-700">
-                        ${order.totalAmount.toFixed(2)}
+                        {formatPrice(order.totalAmount)}
                       </span>
                     </div>
                   </div>

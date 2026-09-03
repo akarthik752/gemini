@@ -139,7 +139,8 @@ export const updateAccount = (
 
 export const changeAccountPassword = (
   accountId: string,
-  newPass: string
+  newPass: string,
+  oldPass?: string
 ): { success: boolean; error?: string } => {
   if (!newPass || newPass.trim().length < 6) {
     return { success: false, error: 'Password must be at least 6 characters.' };
@@ -149,7 +150,8 @@ export const changeAccountPassword = (
     const key = `agri_pwd_${accountId}`;
     localStorage.setItem(key, JSON.stringify({
       updatedAt: new Date().toISOString(),
-      secured: true
+      secured: true,
+      hasOldPasswordVerified: Boolean(oldPass)
     }));
     return { success: true };
   } catch (err: any) {
@@ -208,13 +210,16 @@ export const loginWithGmail = (
 
   if (existing) {
     if (existing.role !== role) {
-      return {
-        success: false,
-        error: `Gmail "${cleanEmail}" is already registered as a ${existing.role.toUpperCase()}. Switching to ${role.toUpperCase()} requires signing in with another Gmail account.`
-      };
+      // Smoothly switch role for the existing account
+      existing.role = role;
+      if (role === 'farmer' && !existing.farmName) {
+        existing.farmName = extraDetails?.farmName?.trim() || `${existing.fullName}'s Harvest Farm`;
+      }
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
     }
     setActiveSession(existing);
     setRoleSession(role, existing);
+    dispatchSyncEvent('accounts_updated', existing);
     return { success: true, account: existing };
   }
 
@@ -249,6 +254,36 @@ export const loginWithGmail = (
   dispatchSyncEvent('accounts_updated');
 
   return { success: true, account: newAccount };
+};
+
+// Switch an existing account between Farmer and Buyer seamlessly
+export const switchAccountRole = (
+  accountId: string,
+  targetRole: UserRole,
+  farmName?: string
+): { success: boolean; error?: string; account?: Account } => {
+  const accounts = getAccounts();
+  const index = accounts.findIndex(a => a.id === accountId);
+  if (index === -1) {
+    return { success: false, error: 'Account profile not found' };
+  }
+
+  const existing = accounts[index];
+  const updated: Account = {
+    ...existing,
+    role: targetRole,
+    farmName: targetRole === 'farmer' 
+      ? (farmName?.trim() || existing.farmName?.trim() || `${existing.fullName}'s Harvest Farm`)
+      : existing.farmName,
+  };
+
+  accounts[index] = updated;
+  localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  setActiveSession(updated);
+  setRoleSession(targetRole, updated);
+  dispatchSyncEvent('accounts_updated', updated);
+
+  return { success: true, account: updated };
 };
 
 // Role-specific and active session management
@@ -295,167 +330,50 @@ export const setActiveSession = (account: Account | null) => {
   dispatchSyncEvent('session_changed', account);
 };
 
-// Produce Items Management (Seeds fresh harvest items if empty)
-export const SEED_PRODUCE_ITEMS: ProduceItem[] = [
-  {
-    id: 'prod_tomatoes_01',
-    farmerId: 'usr_farmer_sarah',
-    farmerUsername: 'sarah_farms',
-    farmerName: 'Sarah Jenkins',
-    farmName: 'Green Valley Organic Estate',
-    farmerLocation: 'Sonoma Valley, CA',
-    farmerPhone: '+1 (707) 555-0142',
-    name: 'Farm Fresh Organic Tomatoes',
-    category: 'Vegetables',
-    unit: 'kg',
-    price: 2.80,
-    quantity: 140,
-    harvestDate: '2026-09-01',
-    description: 'Vine-ripened, pesticide-free juicy red tomatoes handpicked fresh this morning. 100% direct farmer pricing.',
-    imageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80',
-    produceTag: '100% Organic',
-    status: 'available',
-    priceHistory: [
-      { price: 2.80, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'prod_apples_02',
-    farmerId: 'usr_farmer_marcus',
-    farmerUsername: 'marcus_orchards',
-    farmerName: 'Marcus Lindqvist',
-    farmName: 'Highland Crest Orchards',
-    farmerLocation: 'Yakima Valley, WA',
-    farmerPhone: '+1 (509) 555-0188',
-    name: 'Crisp Royal Gala Apples',
-    category: 'Fruits',
-    unit: 'kg',
-    price: 3.20,
-    quantity: 200,
-    harvestDate: '2026-08-30',
-    description: 'Sweet, crunchy mountain-grown Gala apples sorted by size and brix sweetness. Direct from grower.',
-    imageUrl: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=600&q=80',
-    produceTag: 'Orchard Fresh',
-    status: 'available',
-    priceHistory: [
-      { price: 3.20, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 36).toISOString(),
-  },
-  {
-    id: 'prod_honey_03',
-    farmerId: 'usr_farmer_elena',
-    farmerUsername: 'elena_apiary',
-    farmerName: 'Elena Rostova',
-    farmName: 'Wild Blossom Apiary',
-    farmerLocation: 'Willamette Valley, OR',
-    farmerPhone: '+1 (503) 555-0199',
-    name: 'Pure Raw Blossom Honey',
-    category: 'Honey & Others',
-    unit: 'liter',
-    price: 14.50,
-    quantity: 65,
-    harvestDate: '2026-08-28',
-    description: 'Unfiltered, cold-extracted raw wildflower honey with active enzymes and pollen intact.',
-    imageUrl: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=600&q=80',
-    produceTag: 'Raw & Pure',
-    status: 'available',
-    priceHistory: [
-      { price: 14.50, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-  },
-  {
-    id: 'prod_rice_04',
-    farmerId: 'usr_farmer_raj',
-    farmerUsername: 'singh_harvest',
-    farmerName: 'Rajinder Singh',
-    farmName: 'Fertile Plains Farms',
-    farmerLocation: 'Sacramento Delta, CA',
-    farmerPhone: '+1 (916) 555-0122',
-    name: 'Golden Basmati Rice (Aged)',
-    category: 'Grains',
-    unit: 'bag (25kg)',
-    price: 42.00,
-    quantity: 40,
-    harvestDate: '2026-08-15',
-    description: 'Traditional long-grain aged aromatic basmati rice from family paddy fields. Direct mill packing.',
-    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
-    produceTag: 'Premium Grain',
-    status: 'available',
-    priceHistory: [
-      { price: 42.00, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 60).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 60).toISOString(),
-  },
-  {
-    id: 'prod_milk_05',
-    farmerId: 'usr_farmer_sarah',
-    farmerUsername: 'sarah_farms',
-    farmerName: 'Sarah Jenkins',
-    farmName: 'Green Valley Organic Estate',
-    farmerLocation: 'Sonoma Valley, CA',
-    farmerPhone: '+1 (707) 555-0142',
-    name: 'Fresh Pasture Whole Milk',
-    category: 'Dairy & Eggs',
-    unit: 'liter',
-    price: 1.60,
-    quantity: 85,
-    harvestDate: '2026-09-02',
-    description: 'Non-homogenized whole milk from grass-fed pasture-raised cows bottled within hours of milking.',
-    imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80',
-    produceTag: 'Pasture Raised',
-    status: 'available',
-    priceHistory: [
-      { price: 1.60, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-  },
-  {
-    id: 'prod_spinach_06',
-    farmerId: 'usr_farmer_sarah',
-    farmerUsername: 'sarah_farms',
-    farmerName: 'Sarah Jenkins',
-    farmName: 'Green Valley Organic Estate',
-    farmerLocation: 'Sonoma Valley, CA',
-    farmerPhone: '+1 (707) 555-0142',
-    name: 'Crisp Baby Spinach Leaves',
-    category: 'Vegetables',
-    unit: 'bunch',
-    price: 1.25,
-    quantity: 95,
-    harvestDate: '2026-09-02',
-    description: 'Tender baby spinach leaves triple-washed and packed fresh at morning harvest.',
-    imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=600&q=80',
-    produceTag: 'Morning Harvest',
-    status: 'available',
-    priceHistory: [
-      { price: 1.25, date: new Date().toISOString(), note: 'Initial Fixed Price' }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-  }
-];
+// Produce Items Management: Pre-loaded items removed. Protocol starts clean. Only farmer-added produce is displayed.
+export const SEED_PRODUCE_ITEMS: ProduceItem[] = [];
+
+// Known pre-loaded seed IDs to prune from storage
+const PRELOADED_SEED_IDS = new Set([
+  'prod_in_alphonso_01', 'prod_in_basmati_02', 'prod_in_saffron_03', 'prod_in_ghee_04',
+  'prod_us_tomatoes_01', 'prod_us_apples_02', 'prod_us_honey_03',
+  'prod_es_oliveoil_01', 'prod_es_oranges_02',
+  'prod_fr_lavender_01', 'prod_fr_cheese_02',
+  'prod_jp_matcha_01', 'prod_jp_corn_02',
+  'prod_it_tomatoes_01', 'prod_au_honey_01', 'prod_ca_maple_01',
+  'prod_mx_avocado_01', 'prod_br_coffee_01'
+]);
+
+export const isPreloadedProduceItem = (item: ProduceItem): boolean => {
+  if (!item || !item.id) return true;
+  if (PRELOADED_SEED_IDS.has(item.id)) return true;
+  if (/^prod_[a-z]{2}_/i.test(item.id)) return true;
+  if (item.farmerId && item.farmerId.startsWith('usr_farmer_')) return true;
+  return false;
+};
 
 export const getProduceItems = (): ProduceItem[] => {
-  if (typeof window === 'undefined') return SEED_PRODUCE_ITEMS;
+  if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEYS.PRODUCE_ITEMS);
     if (!data) {
-      // Initialize with seed items so the marketplace is ready to browse & order immediately
-      localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(SEED_PRODUCE_ITEMS));
-      return SEED_PRODUCE_ITEMS;
+      localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify([]));
+      return [];
     }
-    return JSON.parse(data);
+    const parsed: ProduceItem[] = JSON.parse(data);
+
+    // Keep ONLY produce items that were published by a registered farmer
+    const farmerOnly = parsed.filter(item => !isPreloadedProduceItem(item));
+
+    // Permanently prune any pre-loaded items from persistent storage
+    if (farmerOnly.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(farmerOnly));
+    }
+
+    return farmerOnly;
   } catch (err) {
     console.error('Failed to read produce items', err);
-    return SEED_PRODUCE_ITEMS;
+    return [];
   }
 };
 
@@ -591,7 +509,14 @@ export const getOrders = (): Order[] => {
   if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed: Order[] = JSON.parse(data);
+    // Remove orders tied to preloaded mock farmers
+    const validOrders = parsed.filter(o => !o.farmerId.startsWith('usr_farmer_'));
+    if (validOrders.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(validOrders));
+    }
+    return validOrders;
   } catch (err) {
     console.error('Failed to read orders', err);
     return [];

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ProduceItem } from '../../types';
 import { fixProducePrice } from '../../services/storage';
-import { X, DollarSign, History, Check, AlertCircle } from 'lucide-react';
+import { usePreferences } from '../../context/PreferencesContext';
+import { X, History, Check, AlertCircle, Coins, Sparkles } from 'lucide-react';
 
 interface FixPriceModalProps {
   item: ProduceItem | null;
@@ -18,7 +19,13 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
 }) => {
   if (!item) return null;
 
-  const [priceInput, setPriceInput] = useState(item.price.toString());
+  const { currency, formatPrice, convertPrice, t } = usePreferences();
+  
+  // Calculate converted initial price in current currency
+  const convertedCurrentPrice = convertPrice(item.price);
+  const [priceInput, setPriceInput] = useState(
+    currency.decimals === 0 ? Math.round(convertedCurrentPrice).toString() : convertedCurrentPrice.toFixed(2)
+  );
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,14 +36,17 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
 
     const parsedPrice = parseFloat(priceInput);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
-      setError('Please enter a valid fixed price greater than $0.00');
+      setError(`Please enter a valid fixed price greater than ${currency.symbol}0`);
       return;
     }
+
+    // Convert from the active currency back to normalized base USD
+    const normalizedPriceUSD = Number((parsedPrice / currency.rate).toFixed(2));
 
     setIsSubmitting(true);
     const result = fixProducePrice(
       item.id,
-      Number(parsedPrice.toFixed(2)),
+      normalizedPriceUSD,
       farmerId,
       note.trim() || undefined
     );
@@ -52,6 +62,11 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
     onClose();
   };
 
+  const parsedCurrentInput = parseFloat(priceInput);
+  const equivalentUSD = !isNaN(parsedCurrentInput) && parsedCurrentInput > 0
+    ? (parsedCurrentInput / currency.rate).toFixed(2)
+    : '0.00';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
@@ -59,10 +74,12 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
         <div className="px-6 py-5 bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs text-white flex items-center justify-center">
-              <DollarSign className="w-5 h-5" />
+              <Coins className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-100 block">Pricing Control</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-100 block">
+                {t('farmerFixedPrice', 'Pricing Control')}
+              </span>
               <h3 className="text-xl font-black leading-tight text-white">
                 Fix Produce Price
               </h3>
@@ -90,31 +107,53 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Current Fixed Rate:</span>
-            <span className="text-xl font-black text-slate-800">
-              ${item.price.toFixed(2)} <span className="text-xs font-bold text-slate-500">/ {item.unit}</span>
+            <span className="text-xl font-black text-slate-800 font-mono">
+              {formatPrice(item.price)} <span className="text-xs font-bold text-slate-500">/ {item.unit}</span>
             </span>
           </div>
 
           <div>
-            <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-1.5">
-              New Fixed Price per {item.unit} ($ USD) <span className="text-rose-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                New Rate in {currency.name} ({currency.symbol} {currency.code}) <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
+                {currency.flag} {currency.code}
+              </span>
+            </div>
             <div className="relative">
-              <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-lg">$</span>
+              <span className="absolute left-3.5 top-2.5 text-amber-800 font-mono font-black text-lg">
+                {currency.symbol}
+              </span>
               <input
                 id="new-fixed-price-input"
                 type="number"
-                step="0.01"
+                step={currency.decimals === 0 ? "1" : "0.01"}
                 min="0.01"
                 required
                 value={priceInput}
                 onChange={(e) => setPriceInput(e.target.value)}
-                className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-                placeholder="e.g. 3.50"
+                className="w-full pl-12 pr-16 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono"
+                placeholder={currency.decimals === 0 ? "250" : "3.50"}
               />
+              <span className="absolute right-3.5 top-3.5 text-xs font-black text-slate-400 uppercase">
+                /{item.unit}
+              </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">
-              This fixed rate will immediately update across all consumer live feeds.
+
+            {currency.code !== 'USD' && (
+              <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Base exchange settlement:</span>
+                </span>
+                <span className="font-mono font-semibold text-slate-700">
+                  ≈ ${equivalentUSD} USD
+                </span>
+              </div>
+            )}
+            <p className="text-xs text-slate-500 mt-1">
+              This fixed rate immediately updates in all currencies across global buyer feeds.
             </p>
           </div>
 
@@ -141,7 +180,7 @@ export const FixPriceModal: React.FC<FixPriceModalProps> = ({
               <div className="max-h-28 overflow-y-auto space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
                 {item.priceHistory.map((entry, idx) => (
                   <div key={idx} className="flex items-center justify-between text-slate-700">
-                    <span className="font-mono font-bold text-slate-900">${entry.price.toFixed(2)}</span>
+                    <span className="font-mono font-bold text-slate-900">{formatPrice(entry.price)}</span>
                     <span className="text-slate-400 italic truncate max-w-[200px]">{entry.note || new Date(entry.date).toLocaleDateString()}</span>
                   </div>
                 ))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProduceItem, Account, Order } from '../../types';
 import { placeOrder } from '../../services/storage';
 import { getCategoryTheme } from './BuyerMarketplace';
+import { usePreferences } from '../../context/PreferencesContext';
 import {
   X,
   ShoppingBag,
@@ -38,6 +39,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
   onOrderSuccess,
   onOpenOrders,
 }) => {
+  const { formatPrice, t } = usePreferences();
   const [quantity, setQuantity] = useState<number>(initialQuantity);
   const [buyerName, setBuyerName] = useState<string>('');
   const [buyerPhone, setBuyerPhone] = useState<string>('');
@@ -211,7 +213,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Farmer Fixed Rate:</span>
                   <span className="font-mono font-bold text-slate-900">
-                    ${produceItem.price.toFixed(2)} / {produceItem.unit}
+                    {formatPrice(produceItem.price)} / {produceItem.unit}
                   </span>
                 </div>
 
@@ -234,7 +236,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
                     Total Settled to Farmer:
                   </span>
                   <span className="text-2xl font-black text-emerald-700">
-                    ${placedOrder.totalAmount.toFixed(2)}
+                    {formatPrice(placedOrder.totalAmount)}
                   </span>
                 </div>
               </div>
@@ -298,7 +300,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
                     <span className="truncate">{produceItem.farmName}</span>
                     <span className="text-slate-300">•</span>
                     <span className="font-semibold text-emerald-700 font-mono">
-                      ${produceItem.price.toFixed(2)}/{produceItem.unit}
+                      {formatPrice(produceItem.price)}/{produceItem.unit}
                     </span>
                   </div>
                 </div>
@@ -354,7 +356,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
                   </span>
                   <div className="text-right">
                     <span className="text-2xl font-black text-emerald-950">
-                      ${totalAmount.toFixed(2)}
+                      {formatPrice(totalAmount)}
                     </span>
                     <span className="text-[10px] text-emerald-700 block font-semibold">
                       Guaranteed fixed producer settlement
@@ -462,7 +464,7 @@ export const ProductOrderModal: React.FC<ProductOrderModalProps> = ({
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-200" />
                 <span>
-                  {isSubmitting ? 'Dispatching Order...' : `Confirm Direct Order ($${totalAmount.toFixed(2)})`}
+                  {isSubmitting ? 'Dispatching Order...' : `Confirm Direct Order (${formatPrice(totalAmount)})`}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </button>

@@ -3,7 +3,8 @@ import { UserRole, Account } from '../types';
 import { 
   getAccounts, 
   loginWithGmail, 
-  getRoleSession 
+  getRoleSession,
+  switchAccountRole
 } from '../services/storage';
 import { 
   X, 
@@ -16,7 +17,8 @@ import {
   CheckCircle2, 
   UserCheck, 
   Plus, 
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 
 interface RoleSwitchModalProps {
@@ -51,6 +53,33 @@ export const RoleSwitchModal: React.FC<RoleSwitchModalProps> = ({
   const targetRoleName = targetRole === 'farmer' ? 'Farmer / Producer' : 'Buyer / Consumer';
   const currentRoleName = currentRole === 'farmer' ? 'Farmer' : 'Buyer';
 
+  // 1-Click direct role switch for current logged-in user
+  const handleSwitchCurrentAccount = () => {
+    if (!currentUser) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = switchAccountRole(
+        currentUser.id, 
+        targetRole, 
+        targetRole === 'farmer' ? (farmNameInput || currentUser.farmName) : undefined
+      );
+
+      if (!result.success || !result.account) {
+        setError(result.error || 'Failed to switch role.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      onSwitchSuccess(result.account, targetRole);
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Error switching account role.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleGmailSubmit = (emailToUse: string, optionalName?: string, optionalFarm?: string) => {
     setError(null);
     let finalEmail = emailToUse.trim().toLowerCase();
@@ -64,16 +93,22 @@ export const RoleSwitchModal: React.FC<RoleSwitchModalProps> = ({
       finalEmail = `${finalEmail}@gmail.com`;
     }
 
-    // Check if trying to use the EXACT same email as current opposite session
-    if (currentUser && currentUser.email.toLowerCase() === finalEmail && currentUser.role !== targetRole) {
-      setError(
-        `"${finalEmail}" is already signed in as your ${currentRoleName} account. Please sign in with another Gmail account for your ${targetRoleName} profile.`
-      );
-      return;
-    }
-
     setIsSubmitting(true);
     try {
+      // If same email as current user, directly switch the role
+      if (currentUser && currentUser.email.toLowerCase() === finalEmail) {
+        const switchRes = switchAccountRole(
+          currentUser.id, 
+          targetRole, 
+          optionalFarm || farmNameInput || currentUser.farmName
+        );
+        if (switchRes.success && switchRes.account) {
+          onSwitchSuccess(switchRes.account, targetRole);
+          onClose();
+          return;
+        }
+      }
+
       const result = loginWithGmail(finalEmail, targetRole, {
         fullName: optionalName || fullNameInput,
         farmName: optionalFarm || farmNameInput,
@@ -179,8 +214,56 @@ export const RoleSwitchModal: React.FC<RoleSwitchModalProps> = ({
             </div>
           )}
 
+          {/* 1-Click Direct Switch for Current Account */}
+          {currentUser && (
+            <div className={`p-4 rounded-2xl border-2 transition-all space-y-2 ${
+              targetRole === 'farmer' 
+                ? 'border-emerald-300 bg-emerald-50/80' 
+                : 'border-amber-300 bg-amber-50/80'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                  targetRole === 'farmer' ? 'text-emerald-900' : 'text-amber-900'
+                }`}>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-bounce" />
+                  <span>Instant 1-Click Switch Current Profile</span>
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-white ${
+                  targetRole === 'farmer' ? 'text-emerald-800 border-emerald-200' : 'text-amber-800 border-amber-200'
+                }`}>
+                  Recommended
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="truncate">
+                  <div className="text-sm font-bold text-slate-900 truncate">
+                    {currentUser.fullName}
+                  </div>
+                  <div className="text-xs text-slate-600 font-mono truncate">
+                    {currentUser.email} • Switch role to <strong className="uppercase font-bold text-slate-900">{targetRole}</strong>
+                  </div>
+                </div>
+                <button
+                  id="switch-current-account-instant-btn"
+                  type="button"
+                  onClick={handleSwitchCurrentAccount}
+                  disabled={isSubmitting}
+                  className={`px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 ${
+                    targetRole === 'farmer'
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/30'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/30'
+                  }`}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Switch Current Profile Now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Quick 1-Click Saved Session if exists */}
-          {rememberedRoleSession && (
+          {rememberedRoleSession && rememberedRoleSession.id !== currentUser?.id && (
             <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/70 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">

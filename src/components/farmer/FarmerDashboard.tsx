@@ -7,6 +7,7 @@ import {
 } from '../../services/storage';
 import { FixPriceModal } from './FixPriceModal';
 import { AddProduceModal } from './AddProduceModal';
+import { usePreferences } from '../../context/PreferencesContext';
 import { 
   Tractor, 
   Plus, 
@@ -37,6 +38,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   orders,
   onRefreshData,
 }) => {
+  const { formatPrice, t, currency } = usePreferences();
   const [activeTab, setActiveTab] = useState<'produce' | 'orders'>('produce');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [itemToFixPrice, setItemToFixPrice] = useState<ProduceItem | null>(null);
@@ -79,9 +81,9 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-fadeIn">
       {/* Farmer Profile Hero Banner - Control Panel 01 */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 text-white p-8 sm:p-12 shadow-xl shadow-emerald-950/20 space-y-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 text-white p-5 sm:p-8 md:p-12 shadow-xl shadow-emerald-950/20 space-y-5 sm:space-y-6">
         {/* Ambient background glow */}
         <div className="absolute -top-16 -right-16 w-64 h-64 bg-amber-400/15 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -92,10 +94,10 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
               <Tractor className="w-3.5 h-3.5 text-amber-300" />
               Producer Management • Dynamic Farmer ID
             </span>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               {farmer.farmName || `${farmer.fullName}'s Farm`}
             </h1>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-emerald-100 font-medium">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-emerald-100 font-medium">
               <span className="bg-emerald-900/60 px-3 py-1 rounded-full text-white font-bold">
                 Proprietor: {farmer.fullName} ({farmer.email || `@${farmer.username}`})
               </span>
@@ -107,11 +109,11 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 relative z-10">
+          <div className="flex items-center gap-3 shrink-0 relative z-10 w-full sm:w-auto">
             <button
               id="farmer-add-item-cta"
               onClick={() => setIsAddModalOpen(true)}
-              className="px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-900 font-black uppercase text-xs tracking-wider rounded-2xl shadow-xl shadow-amber-500/30 transition-all flex items-center gap-2 transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-5 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-900 font-black uppercase text-xs tracking-wider rounded-2xl shadow-xl shadow-amber-500/30 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4" />
               <span>Publish Produce & Fix Price</span>
@@ -121,56 +123,56 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
       </div>
 
       {/* Vivid Colorful Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between opacity-90 mb-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider">Active Produce</span>
-            <Package className="w-5 h-5 text-emerald-100" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between opacity-90 mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider truncate">Active Produce</span>
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-100 shrink-0 ml-1" />
           </div>
-          <div className="text-3xl sm:text-4xl font-black">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black truncate">
             {myItems.length}
           </div>
-          <span className="text-xs text-emerald-100 font-medium mt-2 block">Live at your fixed prices</span>
+          <span className="text-[10px] sm:text-xs text-emerald-100 font-medium mt-1 sm:mt-2 block truncate">Live at your fixed prices</span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between opacity-90 mb-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider">Total Stock</span>
-            <TrendingUp className="w-5 h-5 text-cyan-100" />
+        <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between opacity-90 mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider truncate">Total Stock</span>
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-100 shrink-0 ml-1" />
           </div>
-          <div className="text-3xl sm:text-4xl font-black">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black truncate">
             {totalStockUnits}
           </div>
-          <span className="text-xs text-cyan-100 font-medium mt-2 block">Available inventory units</span>
+          <span className="text-[10px] sm:text-xs text-cyan-100 font-medium mt-1 sm:mt-2 block truncate">Available inventory units</span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between opacity-90 mb-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider">Orders Received</span>
-            <ShoppingBag className="w-5 h-5 text-amber-100" />
+        <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between opacity-90 mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider truncate">Orders Received</span>
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-amber-100 shrink-0 ml-1" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-3xl sm:text-4xl font-black">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-black truncate">
               {myOrders.length}
             </span>
             {pendingOrdersCount > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full bg-white text-orange-600 text-xs font-black uppercase">
+              <span className="px-2 py-0.5 rounded-full bg-white text-orange-600 text-[10px] sm:text-xs font-black uppercase shrink-0">
                 {pendingOrdersCount} new
               </span>
             )}
           </div>
-          <span className="text-xs text-amber-100 font-medium mt-2 block">Direct from buyers</span>
+          <span className="text-[10px] sm:text-xs text-amber-100 font-medium mt-1 sm:mt-2 block truncate">Direct from buyers</span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-lg shadow-purple-600/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between opacity-90 mb-3">
-            <span className="text-xs uppercase font-extrabold tracking-wider">Total Revenue</span>
-            <DollarSign className="w-5 h-5 text-purple-100" />
+        <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-lg shadow-purple-600/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between opacity-90 mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider truncate">Total Revenue</span>
+            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-purple-100 shrink-0 ml-1" />
           </div>
-          <div className="text-3xl sm:text-4xl font-black">
-            ${totalRevenue.toFixed(2)}
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black truncate">
+            {formatPrice(totalRevenue)}
           </div>
-          <span className="text-xs text-purple-100 font-medium mt-2 block">At your fixed rates</span>
+          <span className="text-[10px] sm:text-xs text-purple-100 font-medium mt-1 sm:mt-2 block truncate">At your fixed rates</span>
         </div>
       </div>
 
@@ -314,7 +316,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                             Your Fixed Price
                           </span>
                           <div className="text-2xl font-black text-emerald-950">
-                            ${item.price.toFixed(2)}
+                            {formatPrice(item.price)}
                             <span className="text-xs font-semibold text-emerald-700 ml-1">
                               /{item.unit}
                             </span>
@@ -487,10 +489,10 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                           </span>
                           <div className="flex items-center gap-3">
                             <span className="text-slate-400 text-xs">
-                              @ ${item.unitPrice.toFixed(2)}/{item.unit}
+                              @ {formatPrice(item.unitPrice)}/{item.unit}
                             </span>
                             <span className="font-bold text-sm text-slate-900">
-                              ${item.totalPrice.toFixed(2)}
+                              {formatPrice(item.totalPrice)}
                             </span>
                           </div>
                         </div>
@@ -500,7 +502,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                     <div className="pt-2 flex justify-between items-center text-sm font-bold border-t border-slate-200">
                       <span className="text-xs uppercase tracking-wider text-slate-600">Total Net Settlement:</span>
                       <span className="text-2xl font-black text-emerald-900">
-                        ${order.totalAmount.toFixed(2)}
+                        {formatPrice(order.totalAmount)}
                       </span>
                     </div>
                   </div>

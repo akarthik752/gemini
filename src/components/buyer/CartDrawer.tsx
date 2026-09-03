@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CartItem, Account } from '../../types';
 import { placeOrder } from '../../services/storage';
+import { usePreferences } from '../../context/PreferencesContext';
 import { 
   X, 
   Trash2, 
@@ -38,6 +39,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onOrderSuccess,
   onOpenOrders,
 }) => {
+  const { formatPrice, t } = usePreferences();
   const [buyerName, setBuyerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
@@ -134,8 +136,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" 
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+        <div className="w-screen max-w-full sm:max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col h-full">
           {/* Colorful Header */}
           <div className="px-6 py-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
@@ -243,7 +245,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           {item.farmName}
                         </div>
                         <div className="text-xs font-black text-slate-800 mt-1">
-                          ${item.price.toFixed(2)} <span className="font-sans not-italic text-[10px] text-slate-500">/{item.unit}</span>
+                          {formatPrice(item.price)} <span className="font-sans not-italic text-[10px] text-slate-500">/{item.unit}</span>
                         </div>
                       </div>
                     </div>
@@ -274,7 +276,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         </button>
                       </div>
                       <span className="text-sm font-black text-slate-900">
-                        ${(item.price * quantity).toFixed(2)}
+                        {formatPrice(item.price * quantity)}
                       </span>
                     </div>
                   </div>
@@ -367,7 +369,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
                   <div className="flex justify-between text-slate-600">
                     <span className="uppercase text-[10px] tracking-wider font-bold">Produce Subtotal:</span>
-                    <span className="font-mono font-bold text-slate-900">${totalAmount.toFixed(2)}</span>
+                    <span className="font-mono font-bold text-slate-900">{formatPrice(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span className="uppercase text-[10px] tracking-wider font-bold">Farmer Fixed Price:</span>
@@ -376,7 +378,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
                     <span className="uppercase text-xs font-black tracking-wider text-slate-900">Total Payable:</span>
                     <span className="text-2xl font-black text-slate-900">
-                      ${totalAmount.toFixed(2)}
+                      {formatPrice(totalAmount)}
                     </span>
                   </div>
                 </div>
