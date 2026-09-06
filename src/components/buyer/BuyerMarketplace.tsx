@@ -382,19 +382,31 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
               {produceItems.length === 0
-                ? 'Only produce published directly by registered farmers will appear here. No pre-loaded items exist. Once a farmer lists crops with their fixed prices, they will instantly appear live here.'
-                : 'Try adjusting your search criteria or switching category filter.'}
+                ? 'Only produce published directly by registered farmers will appear here. No pre-loaded items exist. Once a farmer lists crops with their fixed prices, they will instantly appear live here for all users.'
+                : `None of the ${produceItems.length} active farmer produce listings match your active filters.`}
             </p>
           </div>
 
-          {produceItems.length === 0 && (
+          {produceItems.length === 0 ? (
             <button
               id="switch-to-farmer-cta"
               onClick={onSwitchToFarmer}
-              className="px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all inline-flex items-center gap-2"
+              className="px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all inline-flex items-center gap-2 cursor-pointer"
             >
               <Tractor className="w-4 h-4" />
-              <span>Switch to Farmer Portal to Publish</span>
+              <span>Switch to Farmer Portal to Publish Produce</span>
+            </button>
+          ) : (
+            <button
+              id="reset-filters-cta"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All');
+                setCountryFilter('ALL');
+              }}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+            >
+              <span>Show All {produceItems.length} Farmer Listings</span>
             </button>
           )}
         </div>

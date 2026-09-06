@@ -27,7 +27,8 @@ import {
   ArrowRight,
   Info,
   CheckCircle2,
-  DollarSign
+  DollarSign,
+  Plus
 } from 'lucide-react';
 
 export default function App() {
@@ -149,9 +150,14 @@ export default function App() {
       return;
     }
 
-    // If guest user, allow navigating directly between portals
+    // If guest user
     if (!currentUser) {
-      setCurrentView(targetRole);
+      if (currentView === targetRole) {
+        // Already on this portal screen, open auth modal directly for this role
+        openAuthWithRole(targetRole);
+      } else {
+        setCurrentView(targetRole);
+      }
       return;
     }
 
@@ -313,18 +319,37 @@ export default function App() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button
                   id="portal-register-farmer-btn"
-                  onClick={() => handleRequestSwitchRole('farmer')}
-                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                  onClick={() => {
+                    if (!currentUser) {
+                      openAuthWithRole('farmer');
+                    } else {
+                      handleRequestSwitchRole('farmer');
+                    }
+                  }}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 cursor-pointer"
                 >
-                  <Tractor className="w-5 h-5" />
-                  <span>Log In with Farmer Gmail</span>
+                  <Tractor className="w-4 h-4" />
+                  <span>{currentUser?.role === 'buyer' ? 'Switch / Sign In as Farmer' : 'Log In with Farmer Gmail'}</span>
                 </button>
+                {!currentUser && (
+                  <button
+                    id="portal-register-new-farmer-btn"
+                    onClick={() => {
+                      setAuthPreferredRole('farmer');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="w-full sm:w-auto px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold rounded-2xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Register New Farmer Account</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => handleRequestSwitchRole('buyer')}
-                  className="w-full sm:w-auto px-8 py-4 bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 text-sm font-bold rounded-2xl shadow-sm transition-all"
+                  onClick={() => setCurrentView('buyer')}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-2xl shadow-xs transition-all cursor-pointer"
                 >
                   Browse Buyer Marketplace
                 </button>

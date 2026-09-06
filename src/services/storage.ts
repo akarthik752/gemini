@@ -346,9 +346,11 @@ const PRELOADED_SEED_IDS = new Set([
 
 export const isPreloadedProduceItem = (item: ProduceItem): boolean => {
   if (!item || !item.id) return true;
+  // Any produce explicitly created by a farmer is NEVER preloaded
+  if (item.isFarmerAdded) return false;
   if (PRELOADED_SEED_IDS.has(item.id)) return true;
-  if (/^prod_[a-z]{2}_/i.test(item.id)) return true;
   if (item.farmerId && item.farmerId.startsWith('usr_farmer_')) return true;
+  if (/^prod_[a-z]{2}_[a-z0-9]+_\d{2}$/i.test(item.id)) return true;
   return false;
 };
 
@@ -386,6 +388,7 @@ export const addProduceItem = (
   const newItem: ProduceItem = {
     ...itemData,
     id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    isFarmerAdded: true,
     status: itemData.quantity <= 0 ? 'out_of_stock' : itemData.quantity < 10 ? 'low_stock' : 'available',
     priceHistory: [
       {

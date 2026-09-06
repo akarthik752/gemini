@@ -41,6 +41,7 @@ export interface ProduceItem {
   imageUrl?: string;
   produceTag?: string; // e.g. 'Organic', 'Farm Fresh', 'Non-GMO', 'Hydroponic'
   status: 'available' | 'low_stock' | 'out_of_stock';
+  isFarmerAdded?: boolean; // Set to true for produce directly listed by farmers
   priceHistory: PriceHistoryEntry[];
   createdAt: string;
   updatedAt: string;

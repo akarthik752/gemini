@@ -3,6 +3,7 @@ import { Account, ProduceItem } from '../../types';
 import { addProduceItem } from '../../services/storage';
 import { PRODUCE_TEMPLATES, UNITS, CATEGORIES, ProduceTemplate } from '../../utils/producePresets';
 import { usePreferences } from '../../context/PreferencesContext';
+import { SUPPORTED_COUNTRIES } from '../../utils/countries';
 import { 
   X, 
   PlusCircle, 
@@ -13,6 +14,7 @@ import {
   Calendar,
   Layers,
   Coins,
+  Globe,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -36,6 +38,8 @@ export const AddProduceModal: React.FC<AddProduceModalProps> = ({
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ProduceItem['category']>('Vegetables');
   const [unit, setUnit] = useState<string>('kg');
+  const initialCountryCode = farmer.countryCode || selectedCountry?.code || 'IN';
+  const [originCountryCode, setOriginCountryCode] = useState<string>(initialCountryCode);
   const defaultInitialPrice = currency.decimals === 0
     ? Math.round(3.5 * currency.rate).toString()
     : (3.5 * currency.rate).toFixed(2);
@@ -89,6 +93,10 @@ export const AddProduceModal: React.FC<AddProduceModalProps> = ({
 
     // Convert from active currency to normalized USD base rate
     const normalizedPriceUSD = Number((parsedPrice / currency.rate).toFixed(2));
+    const chosenCountry = SUPPORTED_COUNTRIES.find(c => c.code === originCountryCode) || selectedCountry;
+    const resolvedCountryName = chosenCountry?.name || farmer.country || 'Local Farm';
+    const resolvedCountryCode = chosenCountry?.code || farmer.countryCode || 'US';
+    const resolvedCountryFlag = chosenCountry?.flag || '🌾';
 
     const newItem = addProduceItem({
       farmerId: farmer.id,
@@ -97,9 +105,9 @@ export const AddProduceModal: React.FC<AddProduceModalProps> = ({
       farmName: farmer.farmName || `${farmer.fullName}'s Farm`,
       farmerLocation: farmer.location,
       farmerPhone: farmer.phone,
-      country: farmer.country || selectedCountry?.name || 'Local Farm',
-      countryCode: farmer.countryCode || selectedCountry?.code || 'US',
-      countryFlag: selectedCountry?.flag || '🌾',
+      country: resolvedCountryName,
+      countryCode: resolvedCountryCode,
+      countryFlag: resolvedCountryFlag,
       name: name.trim(),
       category,
       unit,
@@ -241,6 +249,31 @@ export const AddProduceModal: React.FC<AddProduceModalProps> = ({
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Farm Origin Country */}
+          <div>
+            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-800 mb-1.5">
+              Produce Origin Country / Global Listing
+            </label>
+            <div className="relative">
+              <Globe className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <select
+                id="item-country-select"
+                value={originCountryCode}
+                onChange={(e) => setOriginCountryCode(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white cursor-pointer"
+              >
+                {SUPPORTED_COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.name} ({c.code}) - {c.region}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">
+              Produce listed here will be visible to all buyers and users worldwide.
+            </p>
           </div>
 
           {/* FIXED PRICE & Available Stock */}
