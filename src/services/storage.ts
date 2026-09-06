@@ -1,6 +1,13 @@
 import { Account, ProduceItem, Order, UserRole, OrderStatus } from '../types';
+import { 
+  saveCloudProduceItem, 
+  deleteCloudProduceItem, 
+  saveCloudOrder, 
+  saveCloudAccount, 
+  fetchCloudAccounts 
+} from './firebase';
 
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   ACCOUNTS: 'agri_market_accounts_v1',
   PRODUCE_ITEMS: 'agri_market_produce_items_v1',
   ORDERS: 'agri_market_orders_v1',
@@ -84,6 +91,7 @@ export const saveAccount = (account: Omit<Account, 'id' | 'createdAt'>): { succe
   accounts.push(newAccount);
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
   setRoleSession(newAccount.role, newAccount);
+  saveCloudAccount(newAccount).catch(console.warn);
   dispatchSyncEvent('accounts_updated');
 
   return { success: true, account: newAccount };
@@ -124,6 +132,7 @@ export const updateAccount = (
 
   accounts[index] = updatedAccount;
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  saveCloudAccount(updatedAccount).catch(console.warn);
 
   // Sync active session if this is the active user
   const active = getActiveSession();
@@ -216,6 +225,7 @@ export const loginWithGmail = (
         existing.farmName = extraDetails?.farmName?.trim() || `${existing.fullName}'s Harvest Farm`;
       }
       localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+      saveCloudAccount(existing).catch(console.warn);
     }
     setActiveSession(existing);
     setRoleSession(role, existing);
@@ -249,6 +259,7 @@ export const loginWithGmail = (
 
   accounts.push(newAccount);
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  saveCloudAccount(newAccount).catch(console.warn);
   setActiveSession(newAccount);
   setRoleSession(role, newAccount);
   dispatchSyncEvent('accounts_updated');
@@ -279,6 +290,7 @@ export const switchAccountRole = (
 
   accounts[index] = updated;
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  saveCloudAccount(updated).catch(console.warn);
   setActiveSession(updated);
   setRoleSession(targetRole, updated);
   dispatchSyncEvent('accounts_updated', updated);
@@ -403,6 +415,7 @@ export const addProduceItem = (
 
   items.unshift(newItem);
   localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(items));
+  saveCloudProduceItem(newItem).catch(console.warn);
   dispatchSyncEvent('produce_updated', newItem);
   return newItem;
 };
@@ -447,6 +460,7 @@ export const fixProducePrice = (
 
   items[index] = updatedItem;
   localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(items));
+  saveCloudProduceItem(updatedItem).catch(console.warn);
   dispatchSyncEvent('produce_updated', updatedItem);
 
   return { success: true, item: updatedItem };
@@ -480,6 +494,7 @@ export const updateProduceQuantity = (
 
   items[index] = updatedItem;
   localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(items));
+  saveCloudProduceItem(updatedItem).catch(console.warn);
   dispatchSyncEvent('produce_updated', updatedItem);
 
   return { success: true, item: updatedItem };
@@ -502,6 +517,7 @@ export const deleteProduceItem = (
 
   const filtered = items.filter(i => i.id !== itemId);
   localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(filtered));
+  deleteCloudProduceItem(itemId).catch(console.warn);
   dispatchSyncEvent('produce_updated', { deletedId: itemId });
 
   return { success: true };
@@ -682,6 +698,17 @@ export const placeOrder = (
   });
 
   localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(existingOrders));
+
+  // Sync newly placed orders and updated stock to cloud
+  createdOrders.forEach(ord => saveCloudOrder(ord).catch(console.warn));
+  cartItems.forEach(({ item }) => {
+    const updated = allItems.find(i => i.id === item.id);
+    if (updated) {
+      saveCloudProduceItem(updated).catch(console.warn);
+    }
+  });
+  saveCloudAccount(actualBuyerAccount).catch(console.warn);
+
   dispatchSyncEvent('produce_updated');
   dispatchSyncEvent('orders_updated');
 
@@ -708,6 +735,7 @@ export const updateOrderStatus = (
   orders[index].updatedAt = new Date().toISOString();
 
   localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  saveCloudOrder(orders[index]).catch(console.warn);
   dispatchSyncEvent('orders_updated', orders[index]);
 
   return { success: true };
@@ -721,3 +749,69 @@ export const resetStorage = () => {
   localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
   dispatchSyncEvent('all_reset');
 };
+
+/**
+ * Fetch accounts stored in Firestore and merge into local cache
+ */
+export const syncCloudAccountsToLocal = async () => {
+  try {
+    const cloudAccounts = await fetchCloudAccounts();
+    if (cloudAccounts.length > 0) {
+      const local = getAccounts();
+      const localMap = new Map(local.map(a => [a.id, a]));
+      cloudAccounts.forEach(ca => {
+        localMap.set(ca.id, ca);
+      });
+      const merged = Array.from(localMap.values());
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(merged));
+      dispatchSyncEvent('accounts_updated');
+    }
+  } catch (err) {
+    console.warn('Failed to sync cloud accounts:', err);
+  }
+};
+
+/**
+ * Push any local produce items created on this device up to Firestore
+ */
+export const syncLocalProduceToCloud = async () => {
+  try {
+    const localItems = getProduceItems();
+    for (const item of localItems) {
+      if (!isPreloadedProduceItem(item)) {
+        await saveCloudProduceItem(item);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to sync local produce to cloud:', err);
+  }
+};
+
+/**
+ * Push local orders to Firestore
+ */
+export const syncLocalOrdersToCloud = async () => {
+  try {
+    const localOrders = getOrders();
+    for (const order of localOrders) {
+      await saveCloudOrder(order);
+    }
+  } catch (err) {
+    console.warn('Failed to sync local orders to cloud:', err);
+  }
+};
+
+/**
+ * Push local accounts to Firestore
+ */
+export const syncLocalAccountsToCloud = async () => {
+  try {
+    const localAccounts = getAccounts();
+    for (const acc of localAccounts) {
+      await saveCloudAccount(acc);
+    }
+  } catch (err) {
+    console.warn('Failed to sync local accounts to cloud:', err);
+  }
+};
+

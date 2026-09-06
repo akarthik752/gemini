@@ -209,8 +209,8 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
             <div className="text-xs uppercase font-bold tracking-wider text-emerald-200">Active Live Listings</div>
             <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white mt-0.5">{produceItems.length} Products</div>
             <div className="inline-flex items-center gap-1.5 text-xs text-amber-300 font-bold mt-1">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-              Real-Time Syncing
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              Live Cloud Sync (All Devices)
             </div>
           </div>
         </div>

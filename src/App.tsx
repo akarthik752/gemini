@@ -6,8 +6,15 @@ import {
   getProduceItems, 
   getOrders, 
   subscribeToSync, 
-  resetStorage 
+  resetStorage,
+  isPreloadedProduceItem,
+  STORAGE_KEYS,
+  syncCloudAccountsToLocal,
+  syncLocalProduceToCloud,
+  syncLocalOrdersToCloud,
+  syncLocalAccountsToCloud
 } from './services/storage';
+import { subscribeToCloudProduce, subscribeToCloudOrders } from './services/firebase';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
 import { FarmerDashboard } from './components/farmer/FarmerDashboard';
@@ -73,9 +80,39 @@ export default function App() {
     setCurrentUser(getActiveSession());
   };
 
-  // Subscribe to live synchronization (cross-tab / cross-component)
+  // Subscribe to live synchronization across all devices and local tabs
   useEffect(() => {
-    const unsubscribe = subscribeToSync((event) => {
+    // 1. One-time sync: ensure any local data already on this device is backed to Firestore
+    syncLocalProduceToCloud();
+    syncLocalOrdersToCloud();
+    syncLocalAccountsToCloud();
+    syncCloudAccountsToLocal();
+
+    // 2. Real-time subscription to cloud produce items from any device
+    const unsubscribeCloudProduce = subscribeToCloudProduce((cloudItems) => {
+      // Filter out preloaded items if any exist
+      const validFarmerItems = cloudItems.filter(item => !isPreloadedProduceItem(item));
+      setProduceItems(validFarmerItems);
+      try {
+        localStorage.setItem(STORAGE_KEYS.PRODUCE_ITEMS, JSON.stringify(validFarmerItems));
+      } catch {
+        // Ignore local storage quota limits
+      }
+    });
+
+    // 3. Real-time subscription to cloud orders from any device
+    const unsubscribeCloudOrders = subscribeToCloudOrders((cloudOrders) => {
+      const validOrders = cloudOrders.filter(o => !o.farmerId?.startsWith('usr_farmer_'));
+      setOrders(validOrders);
+      try {
+        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(validOrders));
+      } catch {
+        // Ignore local storage quota limits
+      }
+    });
+
+    // 4. Local tab broadcast sync
+    const unsubscribeLocalSync = subscribeToSync((event) => {
       reloadData();
       if (event.type === 'produce_updated') {
         showNotification('Produce listings & fixed prices updated');
@@ -84,7 +121,11 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeCloudProduce();
+      unsubscribeCloudOrders();
+      unsubscribeLocalSync();
+    };
   }, []);
 
   // Cart operations
