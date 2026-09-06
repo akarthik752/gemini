@@ -12,13 +12,24 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Account, ProduceItem, Order } from '../types';
 
+// Resolved configuration supporting both direct config and Render / Vite env variables
+const activeFirebaseConfig = {
+  projectId: (import.meta.env?.VITE_FIREBASE_PROJECT_ID as string) || firebaseConfig.projectId,
+  appId: (import.meta.env?.VITE_FIREBASE_APP_ID as string) || firebaseConfig.appId,
+  apiKey: (import.meta.env?.VITE_FIREBASE_API_KEY as string) || firebaseConfig.apiKey,
+  authDomain: (import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN as string) || firebaseConfig.authDomain,
+  firestoreDatabaseId: (import.meta.env?.VITE_FIREBASE_DATABASE_ID as string) || firebaseConfig.firestoreDatabaseId || '(default)',
+  storageBucket: (import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET as string) || firebaseConfig.storageBucket,
+  messagingSenderId: (import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || firebaseConfig.messagingSenderId,
+};
+
 // Initialize Firebase App
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length === 0 ? initializeApp(activeFirebaseConfig) : getApp();
 
 // Initialize Firestore with specific database ID from config
 export const db: Firestore = getFirestore(
   app, 
-  firebaseConfig.firestoreDatabaseId || '(default)'
+  activeFirebaseConfig.firestoreDatabaseId || '(default)'
 );
 
 // Collections
